@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoryTail Admin Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f0f23;
+            --surface: #1a1a35;
+            --surface2: #252547;
+            --primary: #8b5cf6;
+            --primary-light: #a78bfa;
+            --secondary: #f472b6;
+            --success: #34d399;
+            --danger: #ef4444;
+            --warning: #fbbf24;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+            --radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Login */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .login-box {
+            background: var(--surface);
+            padding: 3rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-box h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-box p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .login-box button {
+            width: 100%;
+        }
+
+        /* Layout */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Cards */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        .stat-card .label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .stat-card .value.purple {
+            color: var(--primary);
+        }
+
+        .stat-card .value.pink {
+            color: var(--secondary);
+        }
+
+        .stat-card .value.green {
+            color: var(--success);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Table */
+        .story-list {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .story-list-header {
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .story-item {
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .story-item:hover {
+            background: var(--surface2);
+        }
+
+        .story-item:last-child {
+            border-bottom: none;
+        }
+
+        .story-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: var(--surface2);
+            flex-shrink: 0;
+        }
+
+        .story-info {
+            flex: 1;
+        }
+
+        .story-info h3 {
+            font-size: 1rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .story-info .meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .badge-active {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--success);
+        }
+
+        .badge-inactive {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        .badge-featured {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--warning);
+        }
+
+        /* Modal / Form */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            z-index: 200;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .modal {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 900px;
+            margin: 2rem auto;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: var(--text-muted);
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab:hover {
+            color: var(--text);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Page editor */
+        .page-card {
+            background: var(--surface2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .page-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .page-card-header h4 {
+            font-size: 0.95rem;
+        }
+
+        /* Image upload */
+        .image-upload {
+            width: 100%;
+            height: 120px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            transition: border-color 0.2s;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .image-upload:hover {
+            border-color: var(--primary);
+        }
+
+        .image-upload.has-image {
+            border-style: solid;
+        }
+
+        .image-upload input {
+            display: none;
+        }
+
+        /* Toggle */
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            width: 44px;
+            height: 24px;
+            background: var(--surface2);
+            border-radius: 12px;
+            position: relative;
+            transition: background 0.3s;
+            border: 1px solid var(--border);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.on {
+            background: var(--primary);
+        }
+
+        .toggle-switch.on::after {
+            transform: translateX(20px);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--success);
+            color: white;
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 300;
+            animation: slideUp 0.3s ease;
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Login Screen -->
+    <div class="login-overlay" id="loginScreen">
+        <div class="login-box">
+            <h1>🔐 Admin Panel</h1>
+            <p>StoryTail AI Hikaye Yönetimi</p>
+            <input type="password" id="adminPassword" placeholder="Admin şifresini girin..."
+                onkeydown="if(event.key==='Enter')login()">
+            <button class="btn btn-primary" onclick="login()" style="margin-top:0.5rem">Giriş Yap</button>
+            <p id="loginError" style="color:var(--danger);margin-top:1rem;font-size:0.85rem;display:none"></p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" style="display:none">
+        <div class="header">
+            <div class="header-title">📚 StoryTail Admin</div>
+            <div class="btn-group">
+                <button class="btn btn-secondary btn-sm" onclick="loadStories()">🔄 Yenile</button>
+                <button class="btn btn-primary btn-sm" onclick="openModal()">+ Yeni Hikaye</button>
+            </div>
+        </div>
+        <div class="container">
+            <div class="stats" id="statsGrid">
+                <div class="stat-card">
+                    <div class="label">Toplam Hikaye</div>
+                    <div class="value purple" id="statTotal">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Aktif</div>
+                    <div class="value green" id="statActive">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Öne Çıkan</div>
+                    <div class="value pink" id="statFeatured">0</div>
+                </div>
+            </div>
+            <div class="story-list">
+                <div class="story-list-header">
+                    <h2>Hikayeler</h2>
+                </div>
+                <div id="storyListBody">
+                    <div class="empty-state">
+                        <div class="icon">📖</div>
+                        <p>Henüz hikaye yok.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Story Modal -->
+    <div class="modal-overlay" id="storyModal" style="display:none" onclick="if(event.target===this)closeModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Yeni Hikaye</h2>
+                <button class="btn btn-secondary btn-sm" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('general',this)">📋 Genel</div>
+                    <div class="tab" onclick="switchTab('pages_tr',this)">🇹🇷 Sayfalar (TR)</div>
+                    <div class="tab" onclick="switchTab('pages_en',this)">🇬🇧 Sayfalar (EN)</div>
+                    <div class="tab" onclick="switchTab('final',this)">🏁 Final</div>
+                </div>
+                <!-- General Tab -->
+                <div class="tab-panel active" id="tab_general">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Hikaye ID</label>
+                            <input class="form-input" id="f_id" placeholder="ornek_hikaye">
+                            <div class="form-hint">Benzersiz, küçük harf, alt çizgi kullanın</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ders Anahtarı</label>
+                            <select class="form-select" id="f_lesson_key">
+                                <option value="lesson_share">Paylaşma</option>
+                                <option value="lesson_courage">Cesaret</option>
+                                <option value="lesson_honesty">Dürüstlük</option>
+                                <option value="lesson_help">Yardımlaşma</option>
+                                <option value="lesson_patience">Sabır</option>
+                                <option value="lesson_respect">Saygı</option>
+                                <option value="lesson_nature">Doğa Sevgisi</option>
+                                <option value="lesson_empathy">Empati</option>
+                                <option value="lesson_kindness">İyilik</option>
+                                <option value="lesson_friendship">Arkadaşlık</option>
+                                <option value="lesson_creativity">Yaratıcılık</option>
+                                <option value="lesson_teamwork">Takım Çalışması</option>
+                                <option value="lesson_gratitude">Şükran</option>
+                                <option value="lesson_perseverance">Azim</option>
+                                <option value="lesson_forgiveness">Affetme</option>
+                                <option value="lesson_curiosity">Merak</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">🇹🇷 Tür</label>
+                            <input class="form-input" id="f_genre_tr" placeholder="Uzay Macerası">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🇬🇧 Genre</label>
+                            <input class="form-input" id="f_genre_en" placeholder="Space Adventure">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">🇹🇷 Başlık</label>
+                            <input class="form-input" id="f_title_tr" placeholder="Yıldız Tozu Gezegeni">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🇬🇧 Title</label>
+                            <input class="form-input" id="f_title_en" placeholder="The Stardust Planet">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">🇹🇷 Tema</label>
+                            <input class="form-input" id="f_theme_tr" placeholder="Uzay">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🇬🇧 Theme</label>
+                            <input class="form-input" id="f_theme_en" placeholder="Space">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">🇹🇷 Karakter Adı</label>
+                            <input class="form-input" id="f_char_tr" placeholder="Kaptan Ali">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🇬🇧 Character Name</label>
+                            <input class="form-input" id="f_char_en" placeholder="Captain Alex">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Kapak Resmi</label>
+                        <div class="image-upload" id="coverUpload"
+                            onclick="document.getElementById('coverFile').click()">
+                            📸 Resim yüklemek için tıklayın
+                            <input type="file" id="coverFile" accept="image/*" onchange="handleCoverUpload(event)">
+                        </div>
+                        <input class="form-input" id="f_cover_url" placeholder="veya URL yapıştırın..."
+                            style="margin-top:0.5rem">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Sıralama</label>
+                            <input class="form-input" id="f_sort" type="number" value="0">
+                        </div>
+                        <div class="form-group"
+                            style="display:flex;gap:2rem;align-items:flex-end;padding-bottom:0.7rem">
+                            <label class="toggle" onclick="toggleSwitch('f_active')">
+                                <div class="toggle-switch on" id="f_active"></div> Aktif
+                            </label>
+                            <label class="toggle" onclick="toggleSwitch('f_featured')">
+                                <div class="toggle-switch" id="f_featured"></div> Öne Çıkan
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <!-- Pages TR Tab -->
+                <div class="tab-panel" id="tab_pages_tr">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                        <h3>🇹🇷 Türkçe Sayfalar</h3>
+                        <button class="btn btn-primary btn-sm" onclick="addPage('tr')">+ Sayfa Ekle</button>
+                    </div>
+                    <div id="pagesList_tr"></div>
+                </div>
+                <!-- Pages EN Tab -->
+                <div class="tab-panel" id="tab_pages_en">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                        <h3>🇬🇧 English Pages</h3>
+                        <button class="btn btn-primary btn-sm" onclick="addPage('en')">+ Add Page</button>
+                    </div>
+                    <div id="pagesList_en"></div>
+                </div>
+                <!-- Final Tab -->
+                <div class="tab-panel" id="tab_final">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">🇹🇷 Final Metni</label>
+                            <textarea class="form-textarea" id="f_final_tr"
+                                placeholder="Hikaye mutlu sonla bitti..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🇬🇧 Final Text</label>
+                            <textarea class="form-textarea" id="f_final_en"
+                                placeholder="The story ended happily..."></textarea>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">🇹🇷 Ahlaki Ders</label>
+                            <textarea class="form-textarea" id="f_moral_tr"
+                                placeholder="Paylaşmak güzeldir..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🇬🇧 Moral Lesson</label>
+                            <textarea class="form-textarea" id="f_moral_en"
+                                placeholder="Sharing is beautiful..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">İptal</button>
+                <button class="btn btn-primary" id="saveBtn" onclick="saveStory()">💾 Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ─── Config ───
+        const SUPABASE_URL = 'https://lqfkuvcfgaapklnqdxti.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxZmt1dmNmZ2FhcGtsbnFkeHRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNzg2NjcsImV4cCI6MjA4Njk1NDY2N30.uwpAQlmEP13U-ebIj4beKuSZbZFPHvjQPRvStsHc_aA';
+        const ADMIN_PASSWORD = 'storytail2026';
+        const BUCKET = 'story-assets';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let stories = [];
+        let editingId = null;
+        let pagesTr = [];
+        let pagesEn = [];
+
+        // ─── Login ───
+        function login() {
+            const pw = document.getElementById('adminPassword').value;
+            if (pw === ADMIN_PASSWORD) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                localStorage.setItem('st_admin', 'true');
+                loadStories();
+            } else {
+                const err = document.getElementById('loginError');
+                err.textContent = 'Yanlış şifre!';
+                err.style.display = 'block';
+            }
+        }
+        if (localStorage.getItem('st_admin') === 'true') {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            loadStories();
+        }
+
+        // ─── Load Stories ───
+        async function loadStories() {
+            const { data, error } = await supabase
+                .from('premade_stories')
+                .select('*')
+                .order('sort_order', { ascending: true });
+            if (error) { toast('Hata: ' + error.message, true); return; }
+            stories = data || [];
+            renderStories();
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').textContent = stories.length;
+            document.getElementById('statActive').textContent = stories.filter(s => s.is_active).length;
+            document.getElementById('statFeatured').textContent = stories.filter(s => s.is_featured).length;
+        }
+
+        function renderStories() {
+            const container = document.getElementById('storyListBody');
+            if (stories.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">📖</div><p>Henüz hikaye yok. "Yeni Hikaye" butonuna tıklayın.</p></div>';
+                return;
+            }
+            container.innerHTML = stories.map(s => `
+        <div class="story-item">
+            <img class="story-thumb" src="${s.cover_image_url || ''}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 60 60%22><rect fill=%22%231a1a35%22 width=%2260%22 height=%2260%22/><text x=%2230%22 y=%2235%22 text-anchor=%22middle%22 fill=%22%238b5cf6%22 font-size=%2224%22>📖</text></svg>'">
+            <div class="story-info">
+                <h3>${s.title_tr} / ${s.title_en}</h3>
+                <div class="meta">
+                    ${s.genre_tr} • ${s.character_name_tr} • ${s.pages_tr?.length || 0} sayfa
+                    <span class="badge ${s.is_active ? 'badge-active' : 'badge-inactive'}">${s.is_active ? 'Aktif' : 'Pasif'}</span>
+                    ${s.is_featured ? '<span class="badge badge-featured">⭐ Öne Çıkan</span>' : ''}
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary btn-sm" onclick="editStory('${s.id}')">✏️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteStory('${s.id}')">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+        }
+
+        // ─── Modal ───
+        function openModal(id) {
+            editingId = id || null;
+            document.getElementById('modalTitle').textContent = id ? 'Hikayeyi Düzenle' : 'Yeni Hikaye';
+            if (id) {
+                const s = stories.find(st => st.id === id);
+                if (!s) return;
+                document.getElementById('f_id').value = s.id;
+                document.getElementById('f_id').disabled = true;
+                document.getElementById('f_genre_tr').value = s.genre_tr;
+                document.getElementById('f_genre_en').value = s.genre_en;
+                document.getElementById('f_title_tr').value = s.title_tr;
+                document.getElementById('f_title_en').value = s.title_en;
+                document.getElementById('f_theme_tr').value = s.theme_tr;
+                document.getElementById('f_theme_en').value = s.theme_en;
+                document.getElementById('f_char_tr').value = s.character_name_tr;
+                document.getElementById('f_char_en').value = s.character_name_en;
+                document.getElementById('f_lesson_key').value = s.lesson_key;
+                document.getElementById('f_cover_url').value = s.cover_image_url || '';
+                document.getElementById('f_sort').value = s.sort_order;
+                document.getElementById('f_active').classList.toggle('on', s.is_active);
+                document.getElementById('f_featured').classList.toggle('on', s.is_featured);
+                document.getElementById('f_final_tr').value = s.final_text_tr || '';
+                document.getElementById('f_final_en').value = s.final_text_en || '';
+                document.getElementById('f_moral_tr').value = s.final_moral_tr || '';
+                document.getElementById('f_moral_en').value = s.final_moral_en || '';
+                pagesTr = s.pages_tr || [];
+                pagesEn = s.pages_en || [];
+                if (s.cover_image_url) {
+                    const el = document.getElementById('coverUpload');
+                    el.style.backgroundImage = `url(${s.cover_image_url})`;
+                    el.classList.add('has-image');
+                    el.innerHTML = '<input type="file" id="coverFile" accept="image/*" onchange="handleCoverUpload(event)">';
+                }
+            } else {
+                document.getElementById('f_id').value = '';
+                document.getElementById('f_id').disabled = false;
+                ['f_genre_tr', 'f_genre_en', 'f_title_tr', 'f_title_en', 'f_theme_tr', 'f_theme_en', 'f_char_tr', 'f_char_en', 'f_cover_url', 'f_final_tr', 'f_final_en', 'f_moral_tr', 'f_moral_en'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('f_sort').value = stories.length + 1;
+                document.getElementById('f_active').classList.add('on');
+                document.getElementById('f_featured').classList.remove('on');
+                document.getElementById('f_lesson_key').value = 'lesson_share';
+                pagesTr = []; pagesEn = [];
+                const el = document.getElementById('coverUpload');
+                el.style.backgroundImage = '';
+                el.classList.remove('has-image');
+                el.innerHTML = '📸 Resim yüklemek için tıklayın<input type="file" id="coverFile" accept="image/*" onchange="handleCoverUpload(event)">';
+            }
+            renderPages('tr');
+            renderPages('en');
+            switchTab('general', document.querySelector('.tab'));
+            document.getElementById('storyModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('storyModal').style.display = 'none';
+            editingId = null;
+        }
+
+        function editStory(id) { openModal(id); }
+
+        // ─── Pages ───
+        function addPage(lang) {
+            const pages = lang === 'tr' ? pagesTr : pagesEn;
+            pages.push({
+                sayfa_no: pages.length + 1,
+                metin: '',
+                gorsel_betimleme: '',
+                karar_noktasi: { soru: '', secenekler: ['', ''] }
+            });
+            renderPages(lang);
+        }
+
+        function removePage(lang, idx) {
+            const pages = lang === 'tr' ? pagesTr : pagesEn;
+            pages.splice(idx, 1);
+            pages.forEach((p, i) => p.sayfa_no = i + 1);
+            renderPages(lang);
+        }
+
+        function renderPages(lang) {
+            const pages = lang === 'tr' ? pagesTr : pagesEn;
+            const container = document.getElementById(`pagesList_${lang}`);
+            if (pages.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem">Henüz sayfa yok. "Sayfa Ekle" butonuna tıklayın.</p>';
+                return;
+            }
+            container.innerHTML = pages.map((p, i) => `
+        <div class="page-card">
+            <div class="page-card-header">
+                <h4>📄 Sayfa ${p.sayfa_no}</h4>
+                <button class="btn btn-danger btn-sm" onclick="removePage('${lang}',${i})">Sil</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Metin</label>
+                <textarea class="form-textarea" rows="3" onchange="updatePage('${lang}',${i},'metin',this.value)">${p.metin || ''}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Görsel Prompt (AI resim üretimi için)</label>
+                <input class="form-input" value="${p.gorsel_betimleme || ''}" onchange="updatePage('${lang}',${i},'gorsel_betimleme',this.value)">
+            </div>
+            ${i < pages.length - 1 ? `
+            <div class="form-group">
+                <label class="form-label">Karar Sorusu</label>
+                <input class="form-input" value="${p.karar_noktasi?.soru || ''}" onchange="updatePageDecision('${lang}',${i},'soru',this.value)">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Seçenek 1</label>
+                    <input class="form-input" value="${p.karar_noktasi?.secenekler?.[0] || ''}" onchange="updatePageOption('${lang}',${i},0,this.value)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Seçenek 2</label>
+                    <input class="form-input" value="${p.karar_noktasi?.secenekler?.[1] || ''}" onchange="updatePageOption('${lang}',${i},1,this.value)">
+                </div>
+            </div>` : '<div class="form-hint">Son sayfa — karar noktası yok</div>'}
+        </div>
+    `).join('');
+        }
+
+        function updatePage(lang, idx, field, value) {
+            const pages = lang === 'tr' ? pagesTr : pagesEn;
+            pages[idx][field] = value;
+        }
+        function updatePageDecision(lang, idx, field, value) {
+            const pages = lang === 'tr' ? pagesTr : pagesEn;
+            if (!pages[idx].karar_noktasi) pages[idx].karar_noktasi = { soru: '', secenekler: ['', ''] };
+            pages[idx].karar_noktasi[field] = value;
+        }
+        function updatePageOption(lang, idx, optIdx, value) {
+            const pages = lang === 'tr' ? pagesTr : pagesEn;
+            if (!pages[idx].karar_noktasi) pages[idx].karar_noktasi = { soru: '', secenekler: ['', ''] };
+            if (!pages[idx].karar_noktasi.secenekler) pages[idx].karar_noktasi.secenekler = ['', ''];
+            pages[idx].karar_noktasi.secenekler[optIdx] = value;
+        }
+
+        // ─── Image Upload ───
+        async function handleCoverUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const storyId = document.getElementById('f_id').value || 'temp_' + Date.now();
+            const ext = file.name.split('.').pop();
+            const path = `premade-images/cover_${storyId}.${ext}`;
+            toast('Resim yükleniyor...');
+            const { data, error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+            if (error) { toast('Upload hatası: ' + error.message, true); return; }
+            const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+            document.getElementById('f_cover_url').value = url;
+            const el = document.getElementById('coverUpload');
+            el.style.backgroundImage = `url(${url})`;
+            el.classList.add('has-image');
+            el.innerHTML = '<input type="file" id="coverFile" accept="image/*" onchange="handleCoverUpload(event)">';
+            toast('✅ Resim yüklendi!');
+        }
+
+        // ─── Save ───
+        async function saveStory() {
+            const id = document.getElementById('f_id').value.trim();
+            if (!id) { toast('ID boş olamaz!', true); return; }
+            const record = {
+                id,
+                genre_tr: document.getElementById('f_genre_tr').value,
+                genre_en: document.getElementById('f_genre_en').value,
+                title_tr: document.getElementById('f_title_tr').value,
+                title_en: document.getElementById('f_title_en').value,
+                theme_tr: document.getElementById('f_theme_tr').value,
+                theme_en: document.getElementById('f_theme_en').value,
+                character_name_tr: document.getElementById('f_char_tr').value,
+                character_name_en: document.getElementById('f_char_en').value,
+                lesson_key: document.getElementById('f_lesson_key').value,
+                cover_image_url: document.getElementById('f_cover_url').value,
+                sort_order: parseInt(document.getElementById('f_sort').value) || 0,
+                is_active: document.getElementById('f_active').classList.contains('on'),
+                is_featured: document.getElementById('f_featured').classList.contains('on'),
+                pages_tr: pagesTr,
+                pages_en: pagesEn,
+                final_text_tr: document.getElementById('f_final_tr').value,
+                final_text_en: document.getElementById('f_final_en').value,
+                final_moral_tr: document.getElementById('f_moral_tr').value,
+                final_moral_en: document.getElementById('f_moral_en').value,
+                updated_at: new Date().toISOString()
+            };
+            document.getElementById('saveBtn').disabled = true;
+            document.getElementById('saveBtn').textContent = '⏳ Kaydediliyor...';
+            let result;
+            if (editingId) {
+                result = await supabase.from('premade_stories').update(record).eq('id', editingId);
+            } else {
+                result = await supabase.from('premade_stories').insert(record);
+            }
+            document.getElementById('saveBtn').disabled = false;
+            document.getElementById('saveBtn').textContent = '💾 Kaydet';
+            if (result.error) { toast('Hata: ' + result.error.message, true); return; }
+            toast(editingId ? '✅ Hikaye güncellendi!' : '✅ Hikaye oluşturuldu!');
+            closeModal();
+            loadStories();
+        }
+
+        // ─── Delete ───
+        async function deleteStory(id) {
+            if (!confirm(`"${id}" hikayesini silmek istediğinize emin misiniz?`)) return;
+            const { error } = await supabase.from('premade_stories').delete().eq('id', id);
+            if (error) { toast('Hata: ' + error.message, true); return; }
+            toast('🗑️ Hikaye silindi!');
+            loadStories();
+        }
+
+        // ─── UI Helpers ───
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('tab_' + tabId).classList.add('active');
+        }
+        function toggleSwitch(id) {
+            document.getElementById(id).classList.toggle('on');
+        }
+        function toast(msg, isError) {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const el = document.createElement('div');
+            el.className = 'toast' + (isError ? ' error' : '');
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+    </script>
+</body>
+
+</html>
