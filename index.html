@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StoryTail Admin Panel</title>
-    <!-- Supabase SDK loaded at end of body -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         :root {
             --bg: #0f0f23;
@@ -759,88 +759,51 @@
         const ADMIN_PASSWORD = 'storytail2026';
         const BUCKET = 'story-assets';
 
-        let supabase = null;
-        let stories = [];
-        let editingId = null;
-        let pagesTr = [];
-        let pagesEn = [];
-
-        // ─── Init Supabase when SDK is ready ───
-        function initApp() {
-            if (!window.supabase || !window.supabase.createClient) {
-                console.log('⏳ Supabase SDK not ready, retrying...');
-                setTimeout(initApp, 200);
-                return;
-            }
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log('✅ Supabase initialized successfully');
-
-            // Wire up event listeners
-            document.getElementById('loginBtn').addEventListener('click', login);
-            document.getElementById('adminPassword').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
-            document.getElementById('refreshBtn').addEventListener('click', function () { loadStories(); });
-            document.getElementById('newStoryBtn').addEventListener('click', function () { openModal(); });
-
-            // Auto-login if previously logged in
-            if (localStorage.getItem('st_admin') === 'true') {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                loadStories();
-            }
+        // Initialize Supabase client
+        var sbClient = null;
+        try {
+            sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('Supabase OK');
+        } catch (e) {
+            console.error('Supabase init failed:', e);
         }
 
-        // Load Supabase SDK dynamically to guarantee onload fires
-        (function loadSupabaseSDK() {
-            var s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-            s.onload = function () {
-                console.log('📦 Supabase SDK loaded');
-                initApp();
-            };
-            s.onerror = function () {
-                console.error('❌ Failed to load Supabase SDK, retrying...');
-                setTimeout(loadSupabaseSDK, 1000);
-            };
-            document.head.appendChild(s);
-        })();
+        var stories = [];
+        var editingId = null;
+        var pagesTr = [];
+        var pagesEn = [];
 
-        // ─── Login ───
-        function login() {
-            if (!supabase) {
-                alert('Supabase yükleniyor, lütfen birkaç saniye bekleyin...');
-                return;
-            }
-            const pw = document.getElementById('adminPassword').value;
+        // Wire up login button
+        document.getElementById('loginBtn').onclick = function () {
+            if (!sbClient) { alert('Supabase hata! Sayfayi yenileyin.'); return; }
+            var pw = document.getElementById('adminPassword').value;
             if (pw === ADMIN_PASSWORD) {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'block';
                 localStorage.setItem('st_admin', 'true');
                 loadStories();
             } else {
-                const err = document.getElementById('loginError');
-                err.textContent = 'Yanlış şifre!';
+                var err = document.getElementById('loginError');
+                err.textContent = 'Yanlis sifre!';
                 err.style.display = 'block';
             }
-        }
+        };
+        document.getElementById('adminPassword').onkeydown = function (e) {
+            if (e.key === 'Enter') document.getElementById('loginBtn').click();
+        };
+        document.getElementById('refreshBtn').onclick = function () { loadStories(); };
+        document.getElementById('newStoryBtn').onclick = function () { openModal(); };
 
-        // Make functions globally accessible for inline onclick handlers in dynamic HTML
-        window.editStory = function (id) { openModal(id); };
-        window.deleteStory = deleteStory;
-        window.switchTab = switchTab;
-        window.toggleSwitch = toggleSwitch;
-        window.addPage = addPage;
-        window.removePage = removePage;
-        window.updatePage = updatePage;
-        window.updatePageDecision = updatePageDecision;
-        window.updatePageOption = updatePageOption;
-        window.handleCoverUpload = handleCoverUpload;
-        window.openModal = openModal;
-        window.closeModal = closeModal;
-        window.saveStory = saveStory;
+        // Auto-login
+        if (localStorage.getItem('st_admin') === 'true' && sbClient) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            loadStories();
+        }
 
         // ─── Load Stories ───
         async function loadStories() {
-            const { data, error } = await supabase
+            const { data, error } = await sbClient
                 .from('premade_stories')
                 .select('*')
                 .order('sort_order', { ascending: true });
@@ -1025,7 +988,7 @@
             const ext = file.name.split('.').pop();
             const path = `premade-images/cover_${storyId}.${ext}`;
             toast('Resim yükleniyor...');
-            const { data, error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+            const { data, error } = await sbClient.storage.from(BUCKET).upload(path, file, { upsert: true });
             if (error) { toast('Upload hatası: ' + error.message, true); return; }
             const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
             document.getElementById('f_cover_url').value = url;
@@ -1067,9 +1030,9 @@
             document.getElementById('saveBtn').textContent = '⏳ Kaydediliyor...';
             let result;
             if (editingId) {
-                result = await supabase.from('premade_stories').update(record).eq('id', editingId);
+                result = await sbClient.from('premade_stories').update(record).eq('id', editingId);
             } else {
-                result = await supabase.from('premade_stories').insert(record);
+                result = await sbClient.from('premade_stories').insert(record);
             }
             document.getElementById('saveBtn').disabled = false;
             document.getElementById('saveBtn').textContent = '💾 Kaydet';
@@ -1082,7 +1045,7 @@
         // ─── Delete ───
         async function deleteStory(id) {
             if (!confirm(`"${id}" hikayesini silmek istediğinize emin misiniz?`)) return;
-            const { error } = await supabase.from('premade_stories').delete().eq('id', id);
+            const { error } = await sbClient.from('premade_stories').delete().eq('id', id);
             if (error) { toast('Hata: ' + error.message, true); return; }
             toast('🗑️ Hikaye silindi!');
             loadStories();
