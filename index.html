@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StoryTail Admin Panel</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- Supabase SDK loaded at end of body -->
     <style>
         :root {
             --bg: #0f0f23;
@@ -546,9 +546,8 @@
         <div class="login-box">
             <h1>🔐 Admin Panel</h1>
             <p>StoryTail AI Hikaye Yönetimi</p>
-            <input type="password" id="adminPassword" placeholder="Admin şifresini girin..."
-                onkeydown="if(event.key==='Enter')login()">
-            <button class="btn btn-primary" onclick="login()" style="margin-top:0.5rem">Giriş Yap</button>
+            <input type="password" id="adminPassword" placeholder="Admin şifresini girin...">
+            <button class="btn btn-primary" id="loginBtn" style="margin-top:0.5rem">Giriş Yap</button>
             <p id="loginError" style="color:var(--danger);margin-top:1rem;font-size:0.85rem;display:none"></p>
         </div>
     </div>
@@ -558,8 +557,8 @@
         <div class="header">
             <div class="header-title">📚 StoryTail Admin</div>
             <div class="btn-group">
-                <button class="btn btn-secondary btn-sm" onclick="loadStories()">🔄 Yenile</button>
-                <button class="btn btn-primary btn-sm" onclick="openModal()">+ Yeni Hikaye</button>
+                <button class="btn btn-secondary btn-sm" id="refreshBtn">🔄 Yenile</button>
+                <button class="btn btn-primary btn-sm" id="newStoryBtn">+ Yeni Hikaye</button>
             </div>
         </div>
         <div class="container">
@@ -753,6 +752,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script>
         // ─── Config ───
         const SUPABASE_URL = 'https://lqfkuvcfgaapklnqdxti.supabase.co';
@@ -766,31 +766,42 @@
         let pagesTr = [];
         let pagesEn = [];
 
-        // ─── Wait for Supabase CDN to load ───
-        function initSupabase() {
-            if (window.supabase && window.supabase.createClient) {
+        // ─── Init Supabase when SDK is ready ───
+        function initApp() {
+            try {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                console.log('✅ Supabase initialized');
-                // Auto-login if previously logged in
-                if (localStorage.getItem('st_admin') === 'true') {
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('mainApp').style.display = 'block';
-                    loadStories();
-                }
-            } else {
-                console.log('⏳ Waiting for Supabase CDN...');
-                setTimeout(initSupabase, 200);
+                console.log('✅ Supabase initialized successfully');
+            } catch (e) {
+                console.error('Supabase init error, retrying...', e);
+                setTimeout(initApp, 300);
+                return;
+            }
+
+            // Wire up event listeners
+            document.getElementById('loginBtn').addEventListener('click', login);
+            document.getElementById('adminPassword').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
+            document.getElementById('refreshBtn').addEventListener('click', function () { loadStories(); });
+            document.getElementById('newStoryBtn').addEventListener('click', function () { openModal(); });
+
+            // Auto-login if previously logged in
+            if (localStorage.getItem('st_admin') === 'true') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                loadStories();
             }
         }
-        document.addEventListener('DOMContentLoaded', initSupabase);
+
+        // Start when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
 
         // ─── Login ───
         function login() {
             if (!supabase) {
-                const err = document.getElementById('loginError');
-                err.textContent = 'Supabase yükleniyor, lütfen bekleyin...';
-                err.style.display = 'block';
-                setTimeout(login, 500);
+                alert('Supabase yükleniyor, lütfen birkaç saniye bekleyin...');
                 return;
             }
             const pw = document.getElementById('adminPassword').value;
@@ -805,6 +816,21 @@
                 err.style.display = 'block';
             }
         }
+
+        // Make functions globally accessible for inline onclick handlers in dynamic HTML
+        window.editStory = function (id) { openModal(id); };
+        window.deleteStory = deleteStory;
+        window.switchTab = switchTab;
+        window.toggleSwitch = toggleSwitch;
+        window.addPage = addPage;
+        window.removePage = removePage;
+        window.updatePage = updatePage;
+        window.updatePageDecision = updatePageDecision;
+        window.updatePageOption = updatePageOption;
+        window.handleCoverUpload = handleCoverUpload;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.saveStory = saveStory;
 
         // ─── Load Stories ───
         async function loadStories() {
