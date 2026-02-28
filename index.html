@@ -760,14 +760,39 @@
         const ADMIN_PASSWORD = 'storytail2026';
         const BUCKET = 'story-assets';
 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let supabase = null;
         let stories = [];
         let editingId = null;
         let pagesTr = [];
         let pagesEn = [];
 
+        // ─── Wait for Supabase CDN to load ───
+        function initSupabase() {
+            if (window.supabase && window.supabase.createClient) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('✅ Supabase initialized');
+                // Auto-login if previously logged in
+                if (localStorage.getItem('st_admin') === 'true') {
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('mainApp').style.display = 'block';
+                    loadStories();
+                }
+            } else {
+                console.log('⏳ Waiting for Supabase CDN...');
+                setTimeout(initSupabase, 200);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', initSupabase);
+
         // ─── Login ───
         function login() {
+            if (!supabase) {
+                const err = document.getElementById('loginError');
+                err.textContent = 'Supabase yükleniyor, lütfen bekleyin...';
+                err.style.display = 'block';
+                setTimeout(login, 500);
+                return;
+            }
             const pw = document.getElementById('adminPassword').value;
             if (pw === ADMIN_PASSWORD) {
                 document.getElementById('loginScreen').style.display = 'none';
@@ -779,11 +804,6 @@
                 err.textContent = 'Yanlış şifre!';
                 err.style.display = 'block';
             }
-        }
-        if (localStorage.getItem('st_admin') === 'true') {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-            loadStories();
         }
 
         // ─── Load Stories ───
