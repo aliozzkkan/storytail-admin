@@ -752,7 +752,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script>
         // ─── Config ───
         const SUPABASE_URL = 'https://lqfkuvcfgaapklnqdxti.supabase.co';
@@ -768,14 +767,13 @@
 
         // ─── Init Supabase when SDK is ready ───
         function initApp() {
-            try {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                console.log('✅ Supabase initialized successfully');
-            } catch (e) {
-                console.error('Supabase init error, retrying...', e);
-                setTimeout(initApp, 300);
+            if (!window.supabase || !window.supabase.createClient) {
+                console.log('⏳ Supabase SDK not ready, retrying...');
+                setTimeout(initApp, 200);
                 return;
             }
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('✅ Supabase initialized successfully');
 
             // Wire up event listeners
             document.getElementById('loginBtn').addEventListener('click', login);
@@ -791,12 +789,20 @@
             }
         }
 
-        // Start when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApp);
-        } else {
-            initApp();
-        }
+        // Load Supabase SDK dynamically to guarantee onload fires
+        (function loadSupabaseSDK() {
+            var s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+            s.onload = function () {
+                console.log('📦 Supabase SDK loaded');
+                initApp();
+            };
+            s.onerror = function () {
+                console.error('❌ Failed to load Supabase SDK, retrying...');
+                setTimeout(loadSupabaseSDK, 1000);
+            };
+            document.head.appendChild(s);
+        })();
 
         // ─── Login ───
         function login() {
